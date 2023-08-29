@@ -1,6 +1,6 @@
 # studentNetwork
 
-I've developed a full-fledged social media platform as a Django-based web application, enabling users to interact, share posts, and connect with others in a dynamic and engaging environment. The project encompasses various features that mirror the functionality of popular social media platforms.
+I've developed a full-fledged social media platform as a Django-based web application named as studentNetworks, enabling users to interact, share posts, and connect with others in a dynamic and engaging environment.
 
 Key Features:
 1. **User Authentication and Profiles:** The platform employs Django's built-in authentication system to manage user registration, login, and password reset functionalities. Each user has a profile where they can provide personal information, a bio, profile picture, and more.
