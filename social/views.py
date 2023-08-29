@@ -472,7 +472,8 @@ class UserSearch(View):
     def get(self, request, *args, **kwargs):
         query = self.request.GET.get('query')
         profile_list = UserProfile.objects.filter(
-            Q(user__username__icontains=query)
+            Q(user__username__icontains=query) 
+    #if the any character of query matches with the usernames present in the database will be fetched by this query.
         )
 
         context = {
@@ -497,16 +498,29 @@ class ListFollowers(View):
         }
 
         return render(request, 'social/followers_list.html', context)
+    
+
+# ***************************************************************************************************************** #
+
 
 class PostNotification(View):
     def get(self, request, notification_pk, post_pk, *args, **kwargs):
         notification = Notification.objects.get(pk=notification_pk)
+        # notification_pk = notificationType
         post = Post.objects.get(pk=post_pk)
+
+        # the code fetches the Notification object and the corresponding Post object from the database 
+        # using their primary keys (notification_pk and post_pk, respectively) via 
+        # Django's object-relational mapping (ORM) system. 
 
         notification.user_has_seen = True
         notification.save()
 
         return redirect('post-detail', pk=post_pk)
+    
+
+# ***************************************************************************************************************** #
+
 
 class FollowNotification(View):
     def get(self, request, notification_pk, profile_pk, *args, **kwargs):
@@ -517,6 +531,10 @@ class FollowNotification(View):
         notification.save()
 
         return redirect('profile', pk=profile_pk)
+    
+
+# ***************************************************************************************************************** #
+
 
 class ThreadNotification(View):
     def get(self, request, notification_pk, object_pk, *args, **kwargs):
@@ -527,6 +545,11 @@ class ThreadNotification(View):
         notification.save()
 
         return redirect('thread', pk=object_pk)
+    
+
+
+# ***************************************************************************************************************** #
+
 
 class RemoveNotification(View):
     def delete(self, request, notification_pk, *args, **kwargs):
@@ -536,6 +559,10 @@ class RemoveNotification(View):
         notification.save()
 
         return HttpResponse('Success', content_type='text/plain')
+    
+
+# ***************************************************************************************************************** #
+
 
 class ListThreads(View):
     def get(self, request, *args, **kwargs):
@@ -546,6 +573,10 @@ class ListThreads(View):
         }
 
         return render(request, 'social/inbox.html', context)
+    
+    
+# ***************************************************************************************************************** #
+
 
 class CreateThread(View):
     def get(self, request, *args, **kwargs):
@@ -564,12 +595,20 @@ class CreateThread(View):
 
         try:
             receiver = User.objects.get(username=username)
+
+
             if ThreadModel.objects.filter(user=request.user, receiver=receiver).exists():
                 thread = ThreadModel.objects.filter(user=request.user, receiver=receiver)[0]
                 return redirect('thread', pk=thread.pk)
             elif ThreadModel.objects.filter(user=receiver, receiver=request.user).exists():
                 thread = ThreadModel.objects.filter(user=receiver, receiver=request.user)[0]
                 return redirect('thread', pk=thread.pk)
+            
+            # It then checks if there's a ThreadModel object (message thread) that exists between 
+            # the currently logged-in user (request.user) and the receiver (receiver).
+            # # If such a thread exists, the code fetches the first thread found (since it's using [0] index) 
+            # and extracts its primary key (pk). It then redirects the user to the "thread" page, 
+            # passing the thread's primary key as a parameter.
 
             if form.is_valid():
                 thread = ThreadModel(
@@ -582,12 +621,27 @@ class CreateThread(View):
         except:
             messages.error(request, 'Invalid username')
             return redirect('create-thread')
+        
+
+# ***************************************************************************************************************** #
+
 
 class ThreadView(View):
     def get(self, request, pk, *args, **kwargs):
         form = MessageForm()
         thread = ThreadModel.objects.get(pk=pk)
-        message_list = MessageModel.objects.filter(thread__pk__contains=pk)
+
+        message_list = MessageModel.objects.filter(thread__pk__contains=pk) #this line of code is extracting a 
+        # list of messages that are part of a specific thread identified by its primary key. 
+        # The variable message_list will hold this list of messages, 
+        # which can then be used to display the messages in the thread on a user interface.
+
+# In Django's ORM, the .objects attribute is used to perform database queries on a specific model.
+# .filter(): This method is used to filter the queryset based on specified conditions.
+# thread__pk__contains: This is a filter condition that targets the thread field's 
+# primary key and checks if it contains the specified primary key (pk).
+# pk: This likely refers to the primary key of the specific thread for which you want to retrieve messages.
+
         context = {
             'thread': thread,
             'form': form,
@@ -595,15 +649,25 @@ class ThreadView(View):
         }
 
         return render(request, 'social/thread.html', context)
+    
+    
+# ***************************************************************************************************************** #
+
 
 class CreateMessage(View):
     def post(self, request, pk, *args, **kwargs):
         form = MessageForm(request.POST, request.FILES)
+        
+        # In django, when a form submitted by the user via post method then request.POST 
+        # fetches all the data that is submitted by the form, and request.FILES dictionary contains all the uploaded files.
+        
         thread = ThreadModel.objects.get(pk=pk)
+        # fetches the thread with the given primary key
         if thread.receiver == request.user:
             receiver = thread.user
         else:
             receiver = thread.receiver
+            
 
         if form.is_valid():
             message = form.save(commit=False)
