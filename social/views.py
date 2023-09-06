@@ -17,12 +17,10 @@ class PostListView(LoginRequiredMixin, View):
     def get(self, request, *args, **kwargs):
         
         logged_in_user = request.user
-        # The request.user attribute contains the user object associated with the current session. django session???
-        
-        posts = Post.objects.filter( #This line queries the database to retrieve posts that are relevant to the logged-in user. 
+       
+        posts = Post.objects.filter( 
             author__profile__followers__in=[logged_in_user.id]
-            # This filter uses Django's double underscore notation to navigate relationships. 
-            # This aims to fetch posts authored by users who are followed by the logged-in user.
+           
         )
 
         form = PostForm()
@@ -30,47 +28,34 @@ class PostListView(LoginRequiredMixin, View):
         share_form = ShareForm()
 
         context = { 
-            # This dictionary defines the context data that will be passed to the template when rendering.
-            'post_list': posts, #The variable posts containing the filtered posts.
-            'shareform': share_form, # The instance of the share form.
-            'form': form, #The instance of the post creation form.
+           
+            'post_list': posts, 
+            'shareform': share_form, 
+            'form': form,
         }
-        return render(request, 'social/post_list.html', context) # It's using Django's render function to generate the HTML content that will be sent as the response.
-
+        return render(request, 'social/post_list.html', context) 
     def post(self, request, *args, **kwargs):
         logged_in_user = request.user
         posts = Post.objects.filter(
             author__profile__followers__in=[logged_in_user.id]
         )
-        form = PostForm(request.POST, request.FILES) # form creates an instance of the PostForm class, passing two arguments:
+        form = PostForm(request.POST, request.FILES)
         
-        # request.POST: In the context of Django, when a user submits a form via POST (e.g., by submitting a web form), 
-        # the data from the form fields is sent in the POST dictionary. The request.POST attribute contains this data.
-        
-        # request.FILES: In Django, when a form includes a file input field (e.g., for uploading images or documents), 
-        # the uploaded files are stored in the request.FILES dictionary.
-
-        files = request.FILES.getlist('image') #collecting all the uploaded files that are stored in image model.
+        files = request.FILES.getlist('image') 
         share_form = ShareForm()
 
         if form.is_valid():
-            new_post = form.save(commit=False) #it creates the model instance in memory but doesn't perform the database insertion yet.
+            new_post = form.save(commit=False) 
             new_post.author = request.user
             new_post.save()
-            # we save the post body first so that we have the access to the id.
-
-            new_post.create_tags() #if there is hashtags in my post then treat them differenly.
-
+            
+            new_post.create_tags() 
             for f in files:
                 img = Image(image=f)
                 img.save()
                 new_post.image.add(img)
-                #This line adds the Image instance (img) to the image many-to-many relationship of the new_post instance. 
-                # In Django, when you have a many-to-many relationship field between two models, 
-                # you can use the add() method to associate instances from one model with instances from another model.
-
-            new_post.save() #here it saves the post with multiple images.
-
+                
+            new_post.save() 
 
         context = {
             'post_list': posts,
@@ -78,7 +63,7 @@ class PostListView(LoginRequiredMixin, View):
             'form': form,
         }
 
-        # now create some sort of slider for multiple images
+        
         return render(request, 'social/post_list.html', context)
     
     
@@ -100,7 +85,7 @@ class PostDetailView(LoginRequiredMixin, View):
 
         return render(request, 'social/post_detail.html', context)
     def post(self, request, pk, *args, **kwargs):
-        post = Post.objects.get(pk=pk) # fetches that particular post by using primary key.
+        post = Post.objects.get(pk=pk)
 
         form = CommentForm(request.POST)
 
@@ -110,11 +95,10 @@ class PostDetailView(LoginRequiredMixin, View):
             new_comment.post = post
             new_comment.save()
 
-            new_comment.create_tags() #if there is any hashtags in my post then treat them differenly.
+            new_comment.create_tags() 
 
         comments = Comment.objects.filter(post=post)
-        #  This line retrieves all comments associated with the post and stores them in the comments variable.
-
+        
         notification = Notification.objects.create(notification_type=2, from_user=request.user, to_user=post.author, post=post)
 
         context = {
@@ -152,20 +136,16 @@ class CommentReplyView(LoginRequiredMixin, View):
 class PostEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Post
     fields = ['body']
-    # The model attribute is set to Post, which indicates that this view will work with the Post model. 
-    # The fields attribute is a list containing the names of the fields,
-    # that can be edited in the form associated with this view. 
+    
 
-    template_name = 'social/post_edit.html' #indicating the template that will be used to render this view.
+    template_name = 'social/post_edit.html' 
 
-    def get_success_url(self): #This method determines the URL to redirect to after successfully editing a post.
-        pk = self.kwargs['pk'] #basically, it is used to extract the arguments from the url That i have been passed in urls.py, by using sel.kwargs dictionary.
+    def get_success_url(self):
+        pk = self.kwargs['pk'] 
         return reverse_lazy('post-detail', kwargs={'pk': pk})
-        # reverse_lazy is a function used to generate URLs for views based on their URL patterns. 
-        # It's particularly useful in class-based views where you need to dynamically generate URLs, 
-        # such as when you want to redirect users after a successful action.
+        
 
-    def test_func(self): #This method is used to determine whether the logged-in user is authorized to edit the post.
+    def test_func(self): 
         post = self.get_object()
         return self.request.user == post.author
 
@@ -174,8 +154,7 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
     template_name = 'social/post_delete.html'
     success_url = reverse_lazy('post-list')
 
-    # here we are not using get_success_url() method bcoz here we are not passing any pk so by using success_url, we set the urls after completion the task, when we should have to render.
-
+    
     def test_func(self):
         post = self.get_object()
         return self.request.user == post.author
@@ -200,15 +179,14 @@ class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 class ProfileView(View):
     def get(self, request, pk, *args, **kwargs):
-        profile = UserProfile.objects.get(pk=pk) # gets the profile which associated with the given primary key from userProfile model.
-        user = profile.user # retreive the user.
-        posts = Post.objects.filter(author=user) # retreive all the post of that user.
+        profile = UserProfile.objects.get(pk=pk) 
+        user = profile.user 
+        posts = Post.objects.filter(author=user) 
 
-        followers = profile.followers.all() # retreive all the followers of that particular profile has.
+        followers = profile.followers.all() 
 
 
-        # Now, we check if the reqest user isfollowing the profile.user or not if not then render the follow button otherwise show unfollow button.
-
+       
         if len(followers) == 0:             
             is_following = False
 
@@ -230,8 +208,7 @@ class ProfileView(View):
             'number_of_followers': number_of_followers,
             'is_following': is_following,
         }
-        # pasing context dictionary to the template when rendering.
-
+        
         return render(request, 'social/profile.html', context)
     
 
@@ -259,7 +236,7 @@ class ProfileEditView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 class AddFollower(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
         profile = UserProfile.objects.get(pk=pk)
-        profile.followers.add(request.user) # adding the requested user to the following list of the profile.user
+        profile.followers.add(request.user) 
 
         notification = Notification.objects.create(notification_type=3, from_user=request.user, to_user=profile.user)
 
@@ -272,7 +249,7 @@ class AddFollower(LoginRequiredMixin, View):
 class RemoveFollower(LoginRequiredMixin, View):
     def post(self, request, pk, *args, **kwargs):
         profile = UserProfile.objects.get(pk=pk)
-        profile.followers.remove(request.user) # if the request.user exists in followers list of profile than remove.
+        profile.followers.remove(request.user) 
 
         return redirect('profile', pk=profile.pk)
     
@@ -282,9 +259,9 @@ class RemoveFollower(LoginRequiredMixin, View):
 
 
 class AddLike(LoginRequiredMixin, View):
-    # for like and dislike the user should have to be logged in.
+    
     def post(self, request, pk, *args, **kwargs):
-        post = Post.objects.get(pk=pk) # fetches the post with given pk.
+        post = Post.objects.get(pk=pk) 
 
         is_dislike = False
 
@@ -312,15 +289,9 @@ class AddLike(LoginRequiredMixin, View):
 
 
         
-# next used to perform a redirect to a specified URL after a certain action, such as submitting a form.
-# If the 'next' key is present in the request.POST dictionary and has a value, the get() method returns that value.
-# If the 'next' key is not present in the dictionary, the get() method returns '/'.
 
         next = request.POST.get('next', '/')
-        # request.POST: In Django, when a user submits a form using the POST method, 
-        # the form data is sent to the server as part of the request's POST dictionary. 
-        # This dictionary contains key-value pairs where the keys are the names of form fields, 
-        # and the values are the data entered by the user.
+       
         return HttpResponseRedirect(next)
     
 
@@ -330,7 +301,7 @@ class AddLike(LoginRequiredMixin, View):
 
 
 class AddDislike(LoginRequiredMixin, View):
-    # for like and dislike the user should have to be logged in.
+    
     def post(self, request, pk, *args, **kwargs):
         post = Post.objects.get(pk=pk)
 
@@ -357,7 +328,7 @@ class AddDislike(LoginRequiredMixin, View):
         if is_dislike:
             post.dislikes.remove(request.user)
 
-        next = request.POST.get('next', '/') #by this we can return to our previous view or template
+        next = request.POST.get('next', '/') 
         return HttpResponseRedirect(next)
     
 
@@ -365,7 +336,7 @@ class AddDislike(LoginRequiredMixin, View):
 
 
 class AddCommentLike(LoginRequiredMixin, View):
-    # for like and dislike the user should have to be logged in.
+    
     def post(self, request, pk, *args, **kwargs):
         comment = Comment.objects.get(pk=pk)
 
@@ -402,7 +373,7 @@ class AddCommentLike(LoginRequiredMixin, View):
 
 
 class AddCommentDislike(LoginRequiredMixin, View):
-    # for like and dislike the user should have to be logged in.
+    
     def post(self, request, pk, *args, **kwargs):
         comment = Comment.objects.get(pk=pk)
 
@@ -440,11 +411,9 @@ class AddCommentDislike(LoginRequiredMixin, View):
 class SharedPostView(View):
     def post(self, request, pk, *args, **kwargs):
        original_post = Post.objects.get(pk=pk) 
-       # This line retrieves the original post that the user wants to share from the database. 
-       # The pk parameter is used to identify the specific post.
+       
        form = ShareForm(request.POST)
-    #    This form is used to gather additional information about the shared post, 
-    # such as an optional comment or description.
+    
 
        if form.is_valid():
             new_post = Post(
@@ -473,7 +442,7 @@ class UserSearch(View):
         query = self.request.GET.get('query')
         profile_list = UserProfile.objects.filter(
             Q(user__username__icontains=query) 
-    #if the any character of query matches with the usernames present in the database will be fetched by this query.
+   
         )
 
         context = {
@@ -506,12 +475,10 @@ class ListFollowers(View):
 class PostNotification(View):
     def get(self, request, notification_pk, post_pk, *args, **kwargs):
         notification = Notification.objects.get(pk=notification_pk)
-        # notification_pk = notificationType
+       
         post = Post.objects.get(pk=post_pk)
 
-        # the code fetches the Notification object and the corresponding Post object from the database 
-        # using their primary keys (notification_pk and post_pk, respectively) via 
-        # Django's object-relational mapping (ORM) system. 
+        
 
         notification.user_has_seen = True
         notification.save()
@@ -604,11 +571,7 @@ class CreateThread(View):
                 thread = ThreadModel.objects.filter(user=receiver, receiver=request.user)[0]
                 return redirect('thread', pk=thread.pk)
             
-            # It then checks if there's a ThreadModel object (message thread) that exists between 
-            # the currently logged-in user (request.user) and the receiver (receiver).
-            # # If such a thread exists, the code fetches the first thread found (since it's using [0] index) 
-            # and extracts its primary key (pk). It then redirects the user to the "thread" page, 
-            # passing the thread's primary key as a parameter.
+           
 
             if form.is_valid():
                 thread = ThreadModel(
@@ -631,16 +594,9 @@ class ThreadView(View):
         form = MessageForm()
         thread = ThreadModel.objects.get(pk=pk)
 
-        message_list = MessageModel.objects.filter(thread__pk__contains=pk) #this line of code is extracting a 
-        # list of messages that are part of a specific thread identified by its primary key. 
-        # The variable message_list will hold this list of messages, 
-        # which can then be used to display the messages in the thread on a user interface.
+        message_list = MessageModel.objects.filter(thread__pk__contains=pk) 
 
-# In Django's ORM, the .objects attribute is used to perform database queries on a specific model.
-# .filter(): This method is used to filter the queryset based on specified conditions.
-# thread__pk__contains: This is a filter condition that targets the thread field's 
-# primary key and checks if it contains the specified primary key (pk).
-# pk: This likely refers to the primary key of the specific thread for which you want to retrieve messages.
+
 
         context = {
             'thread': thread,
@@ -658,11 +614,9 @@ class CreateMessage(View):
     def post(self, request, pk, *args, **kwargs):
         form = MessageForm(request.POST, request.FILES)
         
-        # In django, when a form submitted by the user via post method then request.POST 
-        # fetches all the data that is submitted by the form, and request.FILES dictionary contains all the uploaded files.
-        
+       
         thread = ThreadModel.objects.get(pk=pk)
-        # fetches the thread with the given primary key
+        
         if thread.receiver == request.user:
             receiver = thread.user
         else:
