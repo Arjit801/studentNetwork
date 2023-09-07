@@ -1,4 +1,4 @@
-# studentNetwork
+# StudentNetwork
 
 I've developed a full-fledged social media platform as a Django-based web application named as studentNetworks, enabling users to interact, share posts, and connect with others in a dynamic and engaging environment.
 
